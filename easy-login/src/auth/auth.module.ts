@@ -7,11 +7,14 @@ import { AuthService } from './auth.service';
 import { UserEntity } from './entity/user.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([UserEntity]),
-    PassportModule.register({ session: true }),
-  ],
+  imports: [TypeOrmModule.forFeature([UserEntity]), PassportModule],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository],
+  providers: [
+    {
+      provide: 'AUTH_SERVICE',
+      useClass: AuthService,
+    },
+    UserRepository,
+  ],
 })
 export class AuthModule {}

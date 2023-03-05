@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserRepository } from './auth.repository';
@@ -9,7 +10,8 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entity/user.entity';
-import { hashSync, verify } from '@node-rs/bcrypt';
+import { hashSync, verify, verifySync } from '@node-rs/bcrypt';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -27,12 +29,33 @@ export class AuthService {
     return this.getUserWithoutPassword(user);
   }
 
-  async validateUser(userId: number): Promise<boolean> {
-    const user = await this.userRepository.findOneUserBy({ id: userId });
+  async login(loginDto: LoginDto) {
+    const user = await this.userRepository.findOneUserBy({
+      userName: loginDto.userName,
+    });
+
     if (!user) {
+      throw new NotFoundException();
+    }
+
+    if (!verifySync(loginDto.password, user.password)) {
+      throw new UnauthorizedException();
+    }
+
+    return this.getUserWithoutPassword(user);
+  }
+
+  async validateUser(username: string, password: string) {
+    const user = await this.userRepository.findOneUserBy({
+      userName: username,
+    });
+    console.log(user);
+
+    const hash = verify(password, user.password);
+    if (!hash) {
       return false;
     }
-    return true;
+    return this.getUserWithoutPassword(user);
   }
 
   async updateUser(body: UpdateUserDto, userId: number) {
